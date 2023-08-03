@@ -28,33 +28,78 @@ impl<const N: usize> Solution<N> {
             return;
         }
         if start + length > N - 1 {
-            let overflow = N - 1 - start - length;
+            let overflow = start + length - N;
             self.path.rotate_left(overflow);
             start -= overflow;
         }
         shuffle_slice(&mut self.path[start..(start + length)])
     }
 
+    fn find_swap_indices(
+        &self,
+        first_index: usize,
+        second_index: usize,
+        length: usize,
+    ) -> Option<(usize, usize)> {
+        let both_can_span_right =
+            (first_index + length <= second_index) && (second_index + length <= N);
+        if both_can_span_right {
+            return Some((first_index, second_index));
+        }
+
+        let both_can_span_middle = second_index - first_index >= 2 * length - 1;
+        if both_can_span_middle {
+            return Some((first_index, second_index - length + 1));
+        }
+
+        let both_can_span_left =
+            (first_index >= length - 1) && (second_index - first_index >= length);
+        if both_can_span_left {
+            return Some((first_index - length + 1, second_index - length + 1));
+        }
+
+        let both_span_opposite = (first_index >= length - 1) && (second_index + length <= N);
+        if both_span_opposite {
+            return Some((first_index - length + 1, second_index));
+        }
+
+        None
+    }
+
     pub fn swap_parts(&mut self, mut first_index: usize, mut second_index: usize, length: usize) {
+        // Current implementation assumes that 3 * length - 2 <= N
+        // This assumption allows for the swap to always be deterministic and possible
+        if 3 * length - 2 > N {
+            panic!("Not possible swap")
+        }
+
         if first_index > second_index {
             std::mem::swap(&mut first_index, &mut second_index);
         }
 
-        let first_can_go_right = second_index - first_index >= length;
-        let second_can_go_rigth = N - second_index + first_index >= length;
-
-        // WARN: This seems wrong
-        if !first_can_go_right && second_can_go_rigth {
-            first_index -= length - 1
-        } else if first_can_go_right && !second_can_go_rigth {
-            second_index -= length - 1
+        match self.find_swap_indices(first_index, second_index, length) {
+            // Perfect scenario
+            Some((first, second)) => {
+                let (head_split, tail_split) = self.path.split_at_mut(second);
+                swap_slices(
+                    &mut head_split[first..(first + length)],
+                    &mut tail_split[0..length],
+                );
+            }
+            // Needs shift
+            None => {
+                let first_can_span_right = first_index + length <= second_index;
+                if first_can_span_right {
+                    // -1 is not possbile due to the 3 * length < N assumption
+                    self.path.rotate_left(first_index - 1);
+                    self.swap_parts(0, second_index - first_index + 1, length);
+                } else {
+                    // First must span left
+                    self.path.rotate_left(first_index - length + 1);
+                    self.swap_parts(0, second_index - first_index + length - 1, length);
+                }
+            }
         }
-
-        let (head_split, tail_split) = self.path.split_at_mut(second_index);
-        swap_slices(
-            &mut head_split[first_index..(first_index + length)],
-            &mut tail_split[0..length],
-        );
     }
 
     pub fn cost(&self, dmatrix: &DistanceMatrix<N>) -> f32 {
@@ -96,19 +141,48 @@ mod tests {
     }
 
     #[test]
+    fn test_solution_past_index() {
+        let data = vec![1, 2, 3, 4, 5, 6];
+        let path: [usize; 6] = data.try_into().unwrap();
+        let mut solution = Solution { path };
+        solution.shuffle(2, 5);
+    }
+
+    #[test]
     fn test_solution_swap() {
-        let path = [1, 2, 3, 4, 5, 6];
+        let path = [1, 2, 3, 4, 5, 6, 7, 8];
         let mut solution = Solution { path };
         solution.swap_parts(0, 3, 3);
-        assert!(solution.path == [4, 5, 6, 1, 2, 3]);
+        assert!(solution.path == [4, 5, 6, 1, 2, 3, 7, 8]);
+    }
+
+    #[test]
+    fn test_solution_swap_opposite() {
+        let path = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut solution = Solution { path };
+        solution.swap_parts(5, 6, 3);
+        dbg!(solution.path);
+        assert!(solution.path == [0, 1, 2, 6, 7, 8, 3, 4, 5]);
     }
 
     #[test]
     fn test_solution_swap_with_shift() {
-        let path = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let path = [0, 1, 2, 3, 4, 5, 6];
+        let mut solution = Solution { path };
+        solution.swap_parts(3, 5, 3);
+        // First shift [1, 2, 3, 4, 5, 6, 0]
+        // Then swap [5, 6, 0, 4, 1, 2, 3]
+        assert!(solution.path == [5, 6, 0, 4, 1, 2, 3]);
+    }
+
+    #[test]
+    fn test_solution_swap_with_shift2() {
+        let path = [0, 1, 2, 3, 4, 5, 6, 7, 8];
         let mut solution = Solution { path };
         solution.swap_parts(6, 7, 3);
-        assert!(solution.path == [1, 2, 3, 7, 8, 9, 4, 5, 6]);
+        // First shift [4, 5, 6, 7, 8, 0, 1, 2, 3]
+        // Then swap [7, 8, 0, 4, 5, 6, 1, 2, 3]
+        assert!(solution.path == [7, 8, 0, 4, 5, 6, 1, 2, 3]);
     }
 
     #[test]
