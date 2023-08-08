@@ -1,5 +1,6 @@
+#[derive(Debug)]
 pub struct DistanceMatrix<const N: usize> {
-    pub matrix: [[f32; N]; N],
+    pub matrix: [[f64; N]; N],
 }
 
 impl<const N: usize> DistanceMatrix<N> {}

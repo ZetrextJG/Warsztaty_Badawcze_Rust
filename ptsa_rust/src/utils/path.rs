@@ -13,6 +13,7 @@ fn swap_slices(first: &mut [usize], second: &mut [usize]) {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Solution<const N: usize> {
     path: [usize; N],
 }
@@ -102,7 +103,7 @@ impl<const N: usize> Solution<N> {
         }
     }
 
-    pub fn cost(&self, dmatrix: &DistanceMatrix<N>) -> f32 {
+    pub fn cost(&self, dmatrix: &DistanceMatrix<N>) -> f64 {
         // Calculate the length of that cycle using the distance matrix
         let mut length = 0.0;
         for i in 0..(N - 1) {
