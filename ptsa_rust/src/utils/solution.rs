@@ -25,6 +25,30 @@ impl<const N: usize> Solution<N> {
         path.shuffle(&mut thread_rng());
         Solution { path }
     }
+
+    pub fn nearest_neightbor_solution(dmatrix: &DistanceMatrix<N>, starting_city: usize) -> Self {
+        if starting_city >= N {
+            panic!("Impossible choice for the first city")
+        }
+
+        let mut solution_path: Vec<usize> = Vec::with_capacity(N);
+        solution_path.push(starting_city);
+
+        let mut current_city = starting_city;
+        for _ in 0..(N - 2) {
+            let next_city = dmatrix.matrix[current_city]
+                .iter()
+                .enumerate()
+                .filter(|(i, _)| *i != current_city && !solution_path.contains(i))
+                .min_by(|(_, a), (_, b)| a.total_cmp(b))
+                .map(|(i, _)| i)
+                .unwrap();
+            solution_path.push(next_city);
+            current_city = next_city;
+        }
+        let path: [usize; N] = solution_path.try_into().unwrap();
+        Solution { path }
+    }
 }
 
 impl<const N: usize> Solution<N> {
