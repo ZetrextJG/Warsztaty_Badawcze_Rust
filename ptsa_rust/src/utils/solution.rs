@@ -35,7 +35,7 @@ impl<const N: usize> Solution<N> {
         solution_path.push(starting_city);
 
         let mut current_city = starting_city;
-        for _ in 0..(N - 2) {
+        for _ in 0..(N - 1) {
             let next_city = dmatrix.matrix[current_city]
                 .iter()
                 .enumerate()
@@ -235,5 +235,16 @@ mod tests {
         let random_sol: Solution<10> = Solution::random_solution();
         assert_eq!(random_sol.path.len(), 10);
         assert_eq!(random_sol.path.iter().unique(), 10);
+    }
+
+    #[test]
+    fn test_heuristic_approach() {
+        let dmatrix: DistanceMatrix<2> = DistanceMatrix {
+            matrix: [[0.0, 1.0], [2.0, 0.0]],
+        };
+        let solution: Solution<2> = Solution::nearest_neightbor_solution(&dmatrix, 0);
+        assert_eq!(solution.path.len(), 2);
+        assert_eq!(solution.path.iter().unique(), 2);
+        assert_eq!(*(solution.path.first().unwrap()), 0);
     }
 }
