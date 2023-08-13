@@ -7,11 +7,6 @@ pub struct TemperatureBounds {
 }
 
 impl TemperatureBounds {
-    pub fn new(min: f64, max: f64) -> TemperatureBounds {
-        assert!(max >= min);
-        TemperatureBounds { max, min }
-    }
-
     pub fn init_temperatures(&self, n: usize, a: f64, b: f64) -> Vec<f64> {
         let beta = Beta::new(a, b).unwrap();
         let beta_samples: Vec<f64> = beta.sample_iter(rand::thread_rng()).take(n).collect();
