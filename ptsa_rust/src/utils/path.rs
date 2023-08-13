@@ -19,6 +19,15 @@ pub struct Solution<const N: usize> {
 }
 
 impl<const N: usize> Solution<N> {
+    pub fn random_solution() -> Self {
+        let vec: Vec<usize> = (0..N).collect();
+        let mut path: [usize; N] = vec.try_into().unwrap();
+        path.shuffle(&mut thread_rng());
+        Solution { path }
+    }
+}
+
+impl<const N: usize> Solution<N> {
     pub fn shuffle(&mut self, mut start: usize, length: usize) {
         if length > N {
             eprintln!(
@@ -116,6 +125,8 @@ impl<const N: usize> Solution<N> {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::helpers::CountUnique;
+
     use super::*;
 
     #[test]
@@ -193,5 +204,12 @@ mod tests {
         let path = [0, 1];
         let solution = Solution { path };
         assert_eq!(solution.cost(&dmatrix), 2.0);
+    }
+
+    #[test]
+    fn test_random_solution() {
+        let random_sol: Solution<10> = Solution::random_solution();
+        assert_eq!(random_sol.path.len(), 10);
+        assert_eq!(random_sol.path.iter().unique(), 10);
     }
 }
