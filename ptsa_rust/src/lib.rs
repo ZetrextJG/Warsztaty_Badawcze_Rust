@@ -11,7 +11,7 @@ use utils::{
 };
 mod utils;
 
-#[from_env]
+#[from_env("DIM")]
 const DIMENSION: usize = 10;
 
 #[pyclass]
