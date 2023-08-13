@@ -1,6 +1,6 @@
-pub fn initialize_transition_function_types(n: &usize, probability_of_shuffle: &f64) -> Vec<bool> {
-    (0..*n)
-        .map(|_| rand::random::<f64>() < *probability_of_shuffle)
+pub fn initialize_transition_function_types(n: usize, probability_of_shuffle: f64) -> Vec<bool> {
+    (0..n)
+        .map(|_| rand::random::<f64>() < probability_of_shuffle)
         .collect()
 }
 
