@@ -15,7 +15,7 @@ fn swap_slices(first: &mut [usize], second: &mut [usize]) {
 
 #[derive(Debug, Clone)]
 pub struct Solution<const N: usize> {
-    path: [usize; N],
+    pub path: [usize; N],
 }
 
 impl<const N: usize> Solution<N> {
