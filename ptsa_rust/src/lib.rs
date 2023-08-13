@@ -42,8 +42,7 @@ impl PtsaAlgorithm {
         &self,
         distance_matrix: DistanceMatrix<N>,
         deadline: i64,
-    ) -> Solution<N> {
-        let best_solution = Solution::random_solution();
+    ) -> (Solution<N>, f64) {
         let temp_bounds = TemperatureBounds {
             max: self.parameters.max_temperature,
             min: self.parameters.min_temperature,
@@ -100,7 +99,8 @@ impl PtsaAlgorithm {
             // This comparation might be a bottleneck
             // Break condition
             if Utc::now().timestamp() >= deadline {
-                return best_solution;
+                let (best_solution, cost) = states.best_solution();
+                return (best_solution.clone(), cost);
             }
 
             for _ in 0..self.parameters.number_of_repeats {
@@ -124,14 +124,14 @@ impl PtsaAlgorithm {
         PtsaAlgorithm { parameters }
     }
 
-    pub fn run_till(&self, matrix: Vec<Vec<f64>>, deadline_timestamp: String) -> Vec<usize> {
+    pub fn run_till(&self, matrix: Vec<Vec<f64>>, deadline_timestamp: String) -> (Vec<usize>, f64) {
         // Run the PTSA algorith on a given distance matrix till the specified deadline
         // Deadtime must be a string containing the number of seconds from the start of unix time.
         // Returns the best solution
         let timestamp = deadline_timestamp.parse::<i64>().unwrap();
         let dmatrix: DistanceMatrix<DIMENSION> = matrix.into();
-        let best_solution = self.run(dmatrix, timestamp);
-        best_solution.path.into()
+        let (best_solution, cost) = self.run(dmatrix, timestamp);
+        (best_solution.path.into(), cost)
     }
 }
 
