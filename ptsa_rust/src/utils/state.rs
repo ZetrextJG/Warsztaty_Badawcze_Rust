@@ -1,6 +1,8 @@
 use rand::{thread_rng, Rng};
 
-use super::{helpers::acceptance, matrix::DistanceMatrix, path::Solution, temp::TemperatureBounds};
+use super::{
+    helpers::acceptance, matrix::DistanceMatrix, solution::Solution, temp::TemperatureBounds,
+};
 
 #[derive(Debug, Clone)]
 pub struct State<const N: usize> {

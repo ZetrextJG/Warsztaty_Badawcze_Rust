@@ -3,7 +3,7 @@ use const_env::from_env;
 use pyo3::prelude::*;
 use utils::{
     matrix::DistanceMatrix,
-    path::Solution,
+    solution::Solution,
     state::{State, StatesContainer},
     temp::TemperatureBounds,
 };
