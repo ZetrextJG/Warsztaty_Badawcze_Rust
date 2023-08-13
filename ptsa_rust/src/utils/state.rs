@@ -42,7 +42,7 @@ pub struct StatesContainer<const N: usize> {
 
     pub states: Vec<State<N>>,
     pub costs: Vec<f64>,
-    pub best_solution_cost: f64,
+    pub best_index: usize,
 }
 
 impl<const N: usize> StatesContainer<N> {
@@ -55,8 +55,20 @@ impl<const N: usize> StatesContainer<N> {
             distance_matrix,
             states: vec![],
             costs: vec![],
-            best_solution_cost: f64::INFINITY,
+            best_index: 0,
         }
+    }
+
+    pub fn best_state(&self) -> &State<N> {
+        self.states.get(self.best_index).unwrap()
+    }
+
+    pub fn best_solution_cost(&self) -> f64 {
+        *self.costs.get(self.best_index).unwrap()
+    }
+
+    pub fn best_solution(&self) -> (&Solution<N>, f64) {
+        (&self.best_state().solution, self.best_solution_cost())
     }
 
     pub fn add(&mut self, state: State<N>) {
@@ -64,8 +76,8 @@ impl<const N: usize> StatesContainer<N> {
 
         self.states.push(state);
         self.costs.push(cost);
-        if cost < self.best_solution_cost {
-            self.best_solution_cost = cost;
+        if cost < self.best_solution_cost() {
+            self.best_index = self.states.len() - 1;
         }
     }
 
@@ -88,9 +100,9 @@ impl<const N: usize> StatesContainer<N> {
             }
         }
 
-        for cost in self.costs.iter() {
-            if *cost < self.best_solution_cost {
-                self.best_solution_cost = *cost;
+        for (i, cost) in self.costs.iter().enumerate() {
+            if *cost < self.best_solution_cost() {
+                self.best_index = i
             }
         }
     }
@@ -111,7 +123,7 @@ impl<const N: usize> StatesContainer<N> {
             std::mem::swap(&mut first_index, &mut second_index);
         }
 
-        let cost_upper_bound = closeness * self.best_solution_cost;
+        let cost_upper_bound = closeness * self.best_solution_cost();
         let first_cost_to_much = self.costs[first_index] > cost_upper_bound;
         let second_cost_to_much = self.costs[second_index] > cost_upper_bound;
 
