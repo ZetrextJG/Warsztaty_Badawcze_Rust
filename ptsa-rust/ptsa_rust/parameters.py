@@ -1,7 +1,5 @@
 from dataclasses import dataclass
 
-from ptsa_rust import Params
-
 
 @dataclass
 class Parameters:
@@ -18,6 +16,3 @@ class Parameters:
     swap_states_probability: float = 0.1
     closeness: float = 1.5
     cooling_rate: float = 0.95
-
-    def to_params(self) -> Params:
-        return Params(**self.__dict__)

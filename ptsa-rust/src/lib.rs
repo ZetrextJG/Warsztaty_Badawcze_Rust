@@ -5,6 +5,7 @@ use rand::{seq::SliceRandom, thread_rng, Rng};
 use utils::{
     helpers::initialize_transition_function_types,
     matrix::DistanceMatrix,
+    params::Params,
     solution::Solution,
     state::{State, StatesContainer},
     temp::TemperatureBounds,
@@ -13,60 +14,6 @@ mod utils;
 
 #[from_env("DIM")]
 const DIMENSION: usize = 10;
-
-#[pyclass]
-#[derive(Clone)]
-pub struct Params {
-    pub number_of_states: usize,
-    pub number_of_repeats: usize,
-    pub number_of_concurrent_threads: usize,
-    pub min_temperature: f64,
-    pub max_temperature: f64,
-    pub probability_of_shuffle: f64,
-    pub probability_of_heuristic: f64,
-    pub temp_beta_a: f64,
-    pub temp_beta_b: f64,
-    pub max_length_percent_of_cycle: f64,
-    pub swap_states_probability: f64,
-    pub closeness: f64,
-    pub cooling_rate: f64,
-}
-
-#[pymethods]
-impl Params {
-    #[new]
-    pub fn new(
-        number_of_states: usize,
-        number_of_repeats: usize,
-        number_of_concurrent_threads: usize,
-        min_temperature: f64,
-        max_temperature: f64,
-        probability_of_shuffle: f64,
-        probability_of_heuristic: f64,
-        temp_beta_a: f64,
-        temp_beta_b: f64,
-        max_length_percent_of_cycle: f64,
-        swap_states_probability: f64,
-        closeness: f64,
-        cooling_rate: f64,
-    ) -> Self {
-        Params {
-            number_of_states,
-            number_of_repeats,
-            number_of_concurrent_threads,
-            min_temperature,
-            max_temperature,
-            probability_of_shuffle,
-            probability_of_heuristic,
-            temp_beta_a,
-            temp_beta_b,
-            max_length_percent_of_cycle,
-            swap_states_probability,
-            closeness,
-            cooling_rate,
-        }
-    }
-}
 
 #[pyclass]
 pub struct PtsaAlgorithm {
@@ -156,8 +103,11 @@ impl PtsaAlgorithm {
 #[pymethods]
 impl PtsaAlgorithm {
     #[new]
-    pub fn new(params: Params) -> Self {
-        PtsaAlgorithm { params }
+    pub fn new(parameters: PyObject) -> Self {
+        Python::with_gil(|py| {
+            let params: Params = parameters.extract(py).unwrap();
+            PtsaAlgorithm { params }
+        })
     }
 
     #[staticmethod]
@@ -180,6 +130,5 @@ impl PtsaAlgorithm {
 #[pymodule]
 fn ptsa_rust(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<PtsaAlgorithm>()?;
-    m.add_class::<Params>()?;
     Ok(())
 }
