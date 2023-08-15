@@ -34,6 +34,7 @@ pub struct Parameters {
 
 #[pyclass]
 pub struct PtsaAlgorithm {
+    pub compiled_dimensions: usize,
     pub parameters: Parameters,
 }
 
@@ -121,7 +122,10 @@ impl PtsaAlgorithm {
 impl PtsaAlgorithm {
     #[new]
     pub fn new(parameters: Parameters) -> Self {
-        PtsaAlgorithm { parameters }
+        PtsaAlgorithm {
+            compiled_dimensions: DIMENSION,
+            parameters,
+        }
     }
 
     pub fn run_till(&self, matrix: Vec<Vec<f64>>, deadline_timestamp: String) -> (Vec<usize>, f64) {
