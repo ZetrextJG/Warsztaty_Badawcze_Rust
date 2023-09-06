@@ -1,3 +1,4 @@
+use pyo3::ffi::Py_FileSystemDefaultEncoding;
 use rand::{thread_rng, Rng};
 
 use super::{
@@ -25,10 +26,10 @@ impl State {
             self.solution.shuffle(start, trans_length);
         } else {
             // I hate this solution but it is O(1) on average
-            let first_index: usize = thread_rng().gen_range(0..=n);
+            let first_index: usize = thread_rng().gen_range(0..n);
             let mut second_index: usize;
             loop {
-                second_index = thread_rng().gen_range(0..=10);
+                second_index = thread_rng().gen_range(0..n);
                 if second_index != first_index {
                     break;
                 }
