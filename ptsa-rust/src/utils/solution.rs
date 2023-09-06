@@ -142,8 +142,8 @@ impl Solution {
                     self.swap_parts(0, second_index - first_index + 1, length);
                 } else {
                     // First must span left
-                    self.path.rotate_left(first_index - length + 1);
-                    self.swap_parts(0, second_index - first_index + length - 1, length);
+                    self.path.rotate_right(length - first_index);
+                    self.swap_parts(0, second_index + length - first_index, length);
                 }
             }
         }
