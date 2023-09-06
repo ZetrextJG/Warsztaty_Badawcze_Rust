@@ -5,22 +5,27 @@ use super::{
 };
 
 #[derive(Debug, Clone)]
-pub struct State<const N: usize> {
-    pub solution: Solution<N>,
+pub struct State {
+    pub solution: Solution,
     pub temperature: f64,
     pub is_transion_shuffle: bool,
 }
 
-impl<const N: usize> State<N> {
+impl State {
+    pub fn size(&self) -> usize {
+        self.solution.size
+    }
+
     pub fn mutate_state(&mut self, max_temp: f64, max_percent: f64) {
+        let n = self.size();
         let ratio = self.temperature / max_temp;
-        let trans_length: usize = (N as f64 * max_percent * ratio).ceil() as usize;
+        let trans_length: usize = (n as f64 * max_percent * ratio).ceil() as usize;
         if self.is_transion_shuffle {
-            let start = thread_rng().gen_range(0..=N);
+            let start = thread_rng().gen_range(0..=n);
             self.solution.shuffle(start, trans_length);
         } else {
             // I hate this solution but it is O(1) on average
-            let first_index: usize = thread_rng().gen_range(0..=N);
+            let first_index: usize = thread_rng().gen_range(0..=n);
             let mut second_index: usize;
             loop {
                 second_index = thread_rng().gen_range(0..=10);
@@ -36,20 +41,17 @@ impl<const N: usize> State<N> {
 }
 
 #[derive(Debug)]
-pub struct StatesContainer<const N: usize> {
+pub struct StatesContainer {
     pub temp_bounds: TemperatureBounds,
-    pub distance_matrix: DistanceMatrix<N>,
+    pub distance_matrix: DistanceMatrix,
 
-    pub states: Vec<State<N>>,
+    pub states: Vec<State>,
     pub costs: Vec<f64>,
     pub best_index: usize,
 }
 
-impl<const N: usize> StatesContainer<N> {
-    pub fn new(
-        temp_bounds: TemperatureBounds,
-        distance_matrix: DistanceMatrix<N>,
-    ) -> StatesContainer<N> {
+impl StatesContainer {
+    pub fn new(temp_bounds: TemperatureBounds, distance_matrix: DistanceMatrix) -> StatesContainer {
         StatesContainer {
             temp_bounds,
             distance_matrix,
@@ -59,7 +61,11 @@ impl<const N: usize> StatesContainer<N> {
         }
     }
 
-    pub fn best_state(&self) -> &State<N> {
+    fn size(&self) -> usize {
+        self.distance_matrix.size
+    }
+
+    pub fn best_state(&self) -> &State {
         self.states.get(self.best_index).unwrap()
     }
 
@@ -67,13 +73,14 @@ impl<const N: usize> StatesContainer<N> {
         *self.costs.get(self.best_index).unwrap()
     }
 
-    pub fn best_solution(&self) -> (&Solution<N>, f64) {
+    pub fn best_solution(&self) -> (&Solution, f64) {
         (&self.best_state().solution, self.best_solution_cost())
     }
 
-    pub fn add(&mut self, state: State<N>) {
-        let cost = state.solution.cost(&self.distance_matrix);
+    pub fn add(&mut self, state: State) {
+        assert!(state.size() == self.size());
 
+        let cost = state.solution.cost(&self.distance_matrix);
         self.states.push(state);
         self.costs.push(cost);
         if cost < self.best_solution_cost() {
@@ -111,7 +118,7 @@ impl<const N: usize> StatesContainer<N> {
         assert!(self.states.len() >= 2);
 
         // I hate this solution but it is O(1) on average
-        let mut first_index: usize = thread_rng().gen_range(0..=N);
+        let mut first_index: usize = thread_rng().gen_range(0..=self.size());
         let mut second_index: usize;
         loop {
             second_index = thread_rng().gen_range(0..=10);

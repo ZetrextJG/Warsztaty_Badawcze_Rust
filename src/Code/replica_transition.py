@@ -25,8 +25,8 @@ def replica_transition(
 
     if first_solution_close_to_best or second_solution_close_to_best:
         pass
-
-    elif uniform(0, 1) < swap_states_probability:
+        
+    if uniform(0, 1) < swap_states_probability:
         temperatures[first_index], temperatures[second_index] = temperatures[second_index], temperatures[first_index]
 
     return temperatures

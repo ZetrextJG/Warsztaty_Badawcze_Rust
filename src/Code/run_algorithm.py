@@ -47,9 +47,7 @@ def run_for_one_problem(problem_name: str):
 
 
 def iterate_over_all_problems():
-    df = pd.DataFrame(
-        columns=["Name", "best_known_sol", "our_solution", "deficit_ratio"]
-    )
+    df = pd.DataFrame(columns=["Name", "best_known_sol", "our_solution", "deficit_ratio"])
     for name, length in best_known_solution.items():
         df = pd.concat(
             [df, pd.DataFrame.from_records([{"Name": name, "best_known_sol": length}])],
@@ -67,13 +65,12 @@ def iterate_over_all_problems():
         print(f"Our solution is worse by {deficit_ratio}%")
         df.loc[(df["Name"] == name), "our_solution"] = solution_length
         df.loc[(df["Name"] == name), "deficit_ratio"] = deficit_ratio
+        break
     df.to_csv("../Tests/Results/My_results.csv")
 
 
 def iterate_over_all_problems_with_time(exec_time: float):
-    df = pd.DataFrame(
-        columns=["Name", "best_known_sol", "our_solution", "deficit_ratio"]
-    )
+    df = pd.DataFrame(columns=["Name", "best_known_sol", "our_solution", "deficit_ratio"])
     for name, length in best_known_solution.items():
         df = pd.concat(
             [df, pd.DataFrame.from_records([{"Name": name, "best_known_sol": length}])],

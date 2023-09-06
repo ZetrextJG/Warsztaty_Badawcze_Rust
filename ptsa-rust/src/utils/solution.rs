@@ -14,55 +14,61 @@ fn swap_slices(first: &mut [usize], second: &mut [usize]) {
 }
 
 #[derive(Debug, Clone)]
-pub struct Solution<const N: usize> {
-    pub path: [usize; N],
+pub struct Solution {
+    pub path: Vec<usize>,
+    pub size: usize,
 }
 
-impl<const N: usize> Solution<N> {
-    pub fn random_solution() -> Self {
-        let vec: Vec<usize> = (0..N).collect();
-        let mut path: [usize; N] = vec.try_into().unwrap();
-        path.shuffle(&mut thread_rng());
-        Solution { path }
+impl Solution {
+    pub fn new(path: Vec<usize>) -> Self {
+        let size = path.len();
+        assert!(size > 0);
+        Solution { path, size }
     }
 
-    pub fn nearest_neightbor_solution(dmatrix: &DistanceMatrix<N>, starting_city: usize) -> Self {
-        if starting_city >= N {
+    pub fn random_solution(size: usize) -> Self {
+        let mut path: Vec<usize> = (0..size).collect();
+        path.shuffle(&mut thread_rng());
+        Solution::new(path)
+    }
+
+    pub fn nearest_neightbor_solution(dmatrix: &DistanceMatrix, starting_city: usize) -> Self {
+        if starting_city >= dmatrix.size {
             panic!("Impossible choice for the first city")
         }
 
-        let mut solution_path: Vec<usize> = Vec::with_capacity(N);
-        solution_path.push(starting_city);
+        let mut path: Vec<usize> = Vec::with_capacity(dmatrix.size);
+        path.push(starting_city);
 
         let mut current_city = starting_city;
-        for _ in 0..(N - 1) {
+        for _ in 0..(dmatrix.size - 1) {
             let next_city = dmatrix.matrix[current_city]
                 .iter()
                 .enumerate()
-                .filter(|(i, _)| *i != current_city && !solution_path.contains(i))
+                .filter(|(i, _)| *i != current_city && !path.contains(i))
                 .min_by(|(_, a), (_, b)| a.total_cmp(b))
                 .map(|(i, _)| i)
                 .unwrap();
-            solution_path.push(next_city);
+            path.push(next_city);
             current_city = next_city;
         }
-        let path: [usize; N] = solution_path.try_into().unwrap();
-        Solution { path }
+        Solution::new(path)
     }
 }
 
-impl<const N: usize> Solution<N> {
+impl Solution {
     pub fn shuffle(&mut self, mut start: usize, length: usize) {
-        if length > N {
+        assert!(start < self.size);
+        if length > self.size {
             eprintln!(
                 "Could not perform the shuffle operation with len {} decreasing to {}",
-                length, N
+                length, self.size
             );
             shuffle_slice(&mut self.path);
             return;
         }
-        if start + length > N - 1 {
-            let overflow = start + length - N;
+        if start + length > self.size - 1 {
+            let overflow = start + length - self.size;
             self.path.rotate_left(overflow);
             start -= overflow;
         }
@@ -75,8 +81,11 @@ impl<const N: usize> Solution<N> {
         second_index: usize,
         length: usize,
     ) -> Option<(usize, usize)> {
+        assert!(first_index < self.size);
+        assert!(second_index < self.size);
+
         let both_can_span_right =
-            (first_index + length <= second_index) && (second_index + length <= N);
+            (first_index + length <= second_index) && (second_index + length <= self.size);
         if both_can_span_right {
             return Some((first_index, second_index));
         }
@@ -92,7 +101,8 @@ impl<const N: usize> Solution<N> {
             return Some((first_index - length + 1, second_index - length + 1));
         }
 
-        let both_span_opposite = (first_index >= length - 1) && (second_index + length <= N);
+        let both_span_opposite =
+            (first_index >= length - 1) && (second_index + length <= self.size);
         if both_span_opposite {
             return Some((first_index - length + 1, second_index));
         }
@@ -101,9 +111,12 @@ impl<const N: usize> Solution<N> {
     }
 
     pub fn swap_parts(&mut self, mut first_index: usize, mut second_index: usize, length: usize) {
+        assert!(first_index < self.size);
+        assert!(second_index < self.size);
+
         // Current implementation assumes that 3 * length - 2 <= N
         // This assumption allows for the swap to always be deterministic and possible
-        if 3 * length - 2 > N {
+        if 3 * length - 2 > self.size {
             panic!("Not possible swap")
         }
 
@@ -136,14 +149,15 @@ impl<const N: usize> Solution<N> {
         }
     }
 
-    pub fn cost(&self, dmatrix: &DistanceMatrix<N>) -> f64 {
+    pub fn cost(&self, dmatrix: &DistanceMatrix) -> f64 {
+        assert_eq!(dmatrix.size, self.size);
         // Calculate the length of that cycle using the distance matrix
         let mut length = 0.0;
-        for i in 0..(N - 1) {
-            let j = (i + 1) % N;
+        for i in 0..(self.size - 1) {
+            let j = (i + 1) % self.size;
             length += dmatrix.matrix[self.path[i]][self.path[j]];
         }
-        length + dmatrix.matrix[self.path[N - 1]][self.path[0]]
+        length + dmatrix.matrix[self.path[self.size - 1]][self.path[0]]
     }
 }
 
@@ -170,79 +184,74 @@ mod tests {
 
     #[test]
     fn test_solution_shuffle() {
-        let data = vec![1, 2, 3, 4, 5, 6];
-        let path: [usize; 6] = data.try_into().unwrap();
-        let mut solution = Solution { path };
+        let path = vec![1, 2, 3, 4, 5, 6];
+        let mut solution = Solution::new(path);
         solution.shuffle(2, 3);
     }
 
     #[test]
     fn test_solution_past_index() {
-        let data = vec![1, 2, 3, 4, 5, 6];
-        let path: [usize; 6] = data.try_into().unwrap();
-        let mut solution = Solution { path };
+        let path = vec![1, 2, 3, 4, 5, 6];
+        let mut solution = Solution::new(path);
         solution.shuffle(2, 5);
     }
 
     #[test]
     fn test_solution_swap() {
-        let path = [1, 2, 3, 4, 5, 6, 7, 8];
-        let mut solution = Solution { path };
+        let path = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let mut solution = Solution::new(path);
         solution.swap_parts(0, 3, 3);
         assert!(solution.path == [4, 5, 6, 1, 2, 3, 7, 8]);
     }
 
     #[test]
     fn test_solution_swap_opposite() {
-        let path = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-        let mut solution = Solution { path };
+        let path = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut solution = Solution::new(path);
         solution.swap_parts(5, 6, 3);
-        dbg!(solution.path);
-        assert!(solution.path == [0, 1, 2, 6, 7, 8, 3, 4, 5]);
+        assert!(solution.path == vec![0, 1, 2, 6, 7, 8, 3, 4, 5]);
     }
 
     #[test]
     fn test_solution_swap_with_shift() {
-        let path = [0, 1, 2, 3, 4, 5, 6];
-        let mut solution = Solution { path };
+        let path = vec![0, 1, 2, 3, 4, 5, 6];
+        let mut solution = Solution::new(path);
         solution.swap_parts(3, 5, 3);
         // First shift [1, 2, 3, 4, 5, 6, 0]
         // Then swap [5, 6, 0, 4, 1, 2, 3]
-        assert!(solution.path == [5, 6, 0, 4, 1, 2, 3]);
+        assert!(solution.path == vec![5, 6, 0, 4, 1, 2, 3]);
     }
 
     #[test]
     fn test_solution_swap_with_shift2() {
-        let path = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-        let mut solution = Solution { path };
+        let path = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
+        let mut solution = Solution::new(path);
         solution.swap_parts(6, 7, 3);
         // First shift [4, 5, 6, 7, 8, 0, 1, 2, 3]
         // Then swap [7, 8, 0, 4, 5, 6, 1, 2, 3]
-        assert!(solution.path == [7, 8, 0, 4, 5, 6, 1, 2, 3]);
+        assert!(solution.path == vec![7, 8, 0, 4, 5, 6, 1, 2, 3]);
     }
 
     #[test]
     fn test_cost() {
-        let matrix = [[0.0, 1.0], [1.0, 0.0]];
-        let dmatrix = DistanceMatrix { matrix };
-        let path = [0, 1];
-        let solution = Solution { path };
+        let matrix = vec![vec![0.0, 1.0], vec![1.0, 0.0]];
+        let dmatrix = DistanceMatrix::new(matrix);
+        let path = vec![0, 1];
+        let solution = Solution::new(path);
         assert_eq!(solution.cost(&dmatrix), 2.0);
     }
 
     #[test]
     fn test_random_solution() {
-        let random_sol: Solution<10> = Solution::random_solution();
+        let random_sol: Solution = Solution::random_solution(10);
         assert_eq!(random_sol.path.len(), 10);
         assert_eq!(random_sol.path.iter().unique(), 10);
     }
 
     #[test]
     fn test_heuristic_approach() {
-        let dmatrix: DistanceMatrix<2> = DistanceMatrix {
-            matrix: [[0.0, 1.0], [2.0, 0.0]],
-        };
-        let solution: Solution<2> = Solution::nearest_neightbor_solution(&dmatrix, 0);
+        let dmatrix = DistanceMatrix::new(vec![vec![0.0, 1.0], vec![2.0, 0.0]]);
+        let solution: Solution = Solution::nearest_neightbor_solution(&dmatrix, 0);
         assert_eq!(solution.path.len(), 2);
         assert_eq!(solution.path.iter().unique(), 2);
         assert_eq!(*(solution.path.first().unwrap()), 0);

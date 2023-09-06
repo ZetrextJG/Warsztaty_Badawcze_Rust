@@ -1,5 +1,4 @@
 use chrono::Utc;
-use const_env::from_env;
 use pyo3::prelude::*;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use utils::{
@@ -12,25 +11,20 @@ use utils::{
 };
 mod utils;
 
-#[from_env("DIM")]
-const DIMENSION: usize = 10;
-
 #[pyclass]
 pub struct PtsaAlgorithm {
     pub params: Params,
 }
 
 impl PtsaAlgorithm {
-    fn run<const N: usize>(
-        &self,
-        distance_matrix: DistanceMatrix<N>,
-        deadline: i64,
-    ) -> (Solution<N>, f64) {
+    fn run(&self, distance_matrix: DistanceMatrix, deadline: i64) -> (Solution, f64) {
+        let size = distance_matrix.size;
+
         let temp_bounds = TemperatureBounds {
             max: self.params.max_temperature,
             min: self.params.min_temperature,
         };
-        let mut all_heuristic_solutions: Vec<(Solution<N>, f64)> = (0..N)
+        let mut all_heuristic_solutions: Vec<(Solution, f64)> = (0..size)
             .map(|starting_city| {
                 Solution::nearest_neightbor_solution(&distance_matrix, starting_city)
             })
@@ -42,7 +36,7 @@ impl PtsaAlgorithm {
 
         // WARN: I choose to use 15% instead of 10% of the solutions
         let takes = (all_heuristic_solutions.len() as f64 * 0.15) as usize;
-        let heuristic_solutions: Vec<Solution<N>> = all_heuristic_solutions
+        let heuristic_solutions: Vec<Solution> = all_heuristic_solutions
             .into_iter()
             .take(takes)
             .map(|(solution, _)| solution)
@@ -58,7 +52,7 @@ impl PtsaAlgorithm {
             self.params.temp_beta_b,
         );
 
-        let mut states: StatesContainer<N> = StatesContainer::new(temp_bounds, distance_matrix);
+        let mut states: StatesContainer = StatesContainer::new(temp_bounds, distance_matrix);
 
         let mut rng = thread_rng();
         for (temperature, is_transion_shuffle) in temperatures.into_iter().zip(shuffle_bool_vector)
@@ -71,7 +65,7 @@ impl PtsaAlgorithm {
                 })
             } else {
                 states.add(State {
-                    solution: Solution::random_solution(),
+                    solution: Solution::random_solution(size),
                     temperature,
                     is_transion_shuffle,
                 })
@@ -79,7 +73,7 @@ impl PtsaAlgorithm {
         }
 
         loop {
-            // This comparation might be a bottleneck
+            // This comparison might be a bottleneck
             // Break condition
             if Utc::now().timestamp() >= deadline {
                 let (best_solution, cost) = states.best_solution();
@@ -110,19 +104,14 @@ impl PtsaAlgorithm {
         })
     }
 
-    #[staticmethod]
-    pub fn dimension() -> usize {
-        DIMENSION
-    }
-
     pub fn run_till(&self, matrix: Vec<Vec<f64>>, deadline_timestamp: String) -> (Vec<usize>, f64) {
         // Run the PTSA algorith on a given distance matrix till the specified deadline
         // Deadtime must be a string containing the number of seconds from the start of unix time.
         // Returns the best solution
         let timestamp = deadline_timestamp.parse::<i64>().unwrap();
-        let dmatrix: DistanceMatrix<DIMENSION> = matrix.into();
+        let dmatrix = DistanceMatrix::new(matrix);
         let (best_solution, cost) = self.run(dmatrix, timestamp);
-        (best_solution.path.into(), cost)
+        (best_solution.path, cost)
     }
 }
 
