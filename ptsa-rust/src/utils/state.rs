@@ -118,10 +118,11 @@ impl StatesContainer {
         assert!(self.states.len() >= 2);
 
         // I hate this solution but it is O(1) on average
-        let mut first_index: usize = thread_rng().gen_range(0..=self.size());
+        let n = self.states.len();
+        let mut first_index: usize = thread_rng().gen_range(0..n);
         let mut second_index: usize;
         loop {
-            second_index = thread_rng().gen_range(0..=10);
+            second_index = thread_rng().gen_range(0..n);
             if second_index != first_index {
                 break;
             }
@@ -135,15 +136,16 @@ impl StatesContainer {
         let second_cost_to_much = self.costs[second_index] > cost_upper_bound;
 
         if first_cost_to_much && second_cost_to_much {
-            // This have to be done to satisfy rust compiler
-            let (first_part, second_part) = self.states.split_at_mut(second_index);
-            let first_state = &mut first_part[first_index];
-            let second_state = &mut second_part[0];
+            // Create raw pointers to swap
+            let first_temp: *mut f64 = &mut self.states[first_index].temperature as *mut f64;
+            let second_temp: *mut f64 = &mut self.states[second_index].temperature as *mut f64;
 
-            // Pick at random with given prob
             let mut rng = thread_rng();
+            // Pick at random with given prob
             if rng.gen_range(0.0..1.0) < swap_probabilty {
-                std::mem::swap(&mut first_state.temperature, &mut second_state.temperature);
+                unsafe {
+                    core::ptr::swap(first_temp, second_temp);
+                }
             }
         }
     }
