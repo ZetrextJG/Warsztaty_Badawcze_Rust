@@ -1,6 +1,15 @@
-use rand::{seq::SliceRandom, thread_rng};
+use rand::{rngs::ThreadRng, seq::SliceRandom, thread_rng, Rng};
 
 use super::matrix::DistanceMatrix;
+
+#[inline]
+fn gen_index(rng: &mut ThreadRng, lbound: usize, ubound: usize) -> usize {
+    if ubound <= (core::u32::MAX as usize) {
+        rng.gen_range(lbound as u32..ubound as u32) as usize
+    } else {
+        rng.gen_range(lbound..ubound)
+    }
+}
 
 fn shuffle_slice(slice: &mut [usize]) {
     slice.shuffle(&mut thread_rng())
@@ -53,7 +62,7 @@ impl Solution {
 }
 
 impl Solution {
-    pub fn shuffle(&mut self, mut start: usize, length: usize) {
+    pub fn shuffle(&mut self, start: usize, length: usize) {
         assert!(start < self.size);
         if length > self.size {
             eprintln!(
@@ -63,12 +72,13 @@ impl Solution {
             shuffle_slice(&mut self.path);
             return;
         }
-        if start + length > self.size - 1 {
-            let overflow = start + length - self.size;
-            self.path.rotate_left(overflow);
-            start -= overflow;
+
+        let rng = &mut thread_rng();
+        let max_length = self.path.len();
+        for i in (start..(start + length)).rev() {
+            let new_index = gen_index(rng, start, i + 1);
+            self.path.swap(i % max_length, new_index % max_length);
         }
-        shuffle_slice(&mut self.path[start..(start + length)])
     }
 
     fn find_swap_indices(
@@ -90,8 +100,7 @@ impl Solution {
             return Some((first_index - length + 1, second_index));
         }
 
-        let mut underflow_first: usize = first_index + self.path.len() + 1 - length;
-        underflow_first %= self.path.len(); // TODO: Check if that is necessary
+        let underflow_first: usize = first_index + self.path.len() + 1 - length;
 
         let first_move_overlap = second_index + length > underflow_first;
         if !first_move_overlap {
@@ -155,24 +164,22 @@ mod tests {
 
     #[test]
     fn test_solution_shuffle() {
-        let path = vec![1, 2, 3, 4, 5, 6];
+        let path = vec![0, 1, 2, 3, 4, 5];
         let mut solution = Solution::new(path);
         solution.shuffle(2, 3);
+        assert_eq!(solution.path[0], 0);
+        assert_eq!(solution.path[1], 1);
+        assert_eq!(solution.path[5], 5);
     }
 
     #[test]
     fn test_solution_past_index() {
-        let path = vec![1, 2, 3, 4, 5, 6];
+        let path = vec![0, 1, 2, 3, 4, 5];
         let mut solution = Solution::new(path);
-        solution.shuffle(2, 5);
-    }
-
-    #[test]
-    fn test_swap_slice() {
-        let mut data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let (first, second) = data.split_at_mut(3);
-        swap_slices(first, &mut second[0..3]);
-        assert_eq!(data, vec![4, 5, 6, 1, 2, 3, 7, 8, 9]);
+        solution.shuffle(5, 3);
+        assert_eq!(solution.path[1], 1);
+        assert_eq!(solution.path[2], 2);
+        assert_eq!(solution.path[3], 3);
     }
 
     #[test]
