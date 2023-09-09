@@ -1,8 +1,16 @@
-import pandas as pd
+import time
+from pathlib import Path
 
+import pandas as pd
+from ptsa_rust import PtsaAlgorithm
+from ptsa_rust.parameters import Parameters
+
+from src.Code.calculate_distance import cycle_length
 from src.Code.pt_sa import pt_sa
 from src.Parameters.best_known_solution import best_known_solution
 from src.Parameters.problems import problems
+
+RESULTS_DIR = Path(__file__).parent.parent / "Tests" / "Results"
 
 
 def set_parameters(exec_time: float) -> dict:
@@ -62,11 +70,13 @@ def iterate_over_all_problems():
             f"Our solution length: {solution_length}, optimal solution length: {optimal_solution_length}"
         )
         deficit_ratio = solution_length / optimal_solution_length * 100 - 100
-        print(f"Our solution is worse by {deficit_ratio}%")
+        print(f"Our solution is worse by {deficit_ratio:.2f}%")
         df.loc[(df["Name"] == name), "our_solution"] = solution_length
         df.loc[(df["Name"] == name), "deficit_ratio"] = deficit_ratio
         break
-    df.to_csv("../Tests/Results/My_results.csv")
+
+    output_file = RESULTS_DIR / "My_results.csv"
+    df.to_csv(output_file)
 
 
 def iterate_over_all_problems_with_time(exec_time: float):
@@ -90,4 +100,55 @@ def iterate_over_all_problems_with_time(exec_time: float):
         print(f"Our solution is worse by {deficit_ratio}%")
         df.loc[(df["Name"] == name), "our_solution"] = solution_length
         df.loc[(df["Name"] == name), "deficit_ratio"] = deficit_ratio
-    df.to_csv("../Tests/Results/long_term_results.csv")
+
+    output_file = RESULTS_DIR / "long_term_results.csv"
+    df.to_csv(output_file)
+
+
+def run_rust_for_one(problem_name: str) -> tuple[list[float], float]:
+    distance_matrix: list[list[float]] = problems[problem_name]  # type: ignore
+    params = Parameters()
+    exec_time = 60 * 5  # 5 min
+    runner = PtsaAlgorithm(params)
+    deadline = int(time.time()) + exec_time
+    solution, solution_length = runner.run_till(
+        distance_matrix,
+        str(deadline),
+    )
+
+    true_length = cycle_length(solution, distance_matrix)
+    optimal_solution_length = best_known_solution[problem_name]
+    print(f"Problem: {problem_name}")
+    print(
+        f"Our solution length: {solution_length}, optimal solution length: {optimal_solution_length}"
+    )
+    print(
+        f"Ultimate best solution: {solution}\nUltimate best solution length: {solution_length} == {true_length}"
+    )
+
+    return solution, solution_length
+
+
+def iterate_over_all_problems_rust():
+    df = pd.DataFrame(columns=["Name", "best_known_sol", "our_solution", "deficit_ratio"])
+    for name, length in best_known_solution.items():
+        df = pd.concat(
+            [df, pd.DataFrame.from_records([{"Name": name, "best_known_sol": length}])],
+            ignore_index=True,
+        )
+    for name in problems.keys():
+        print(f"Problem: {name}")
+        solution, solution_length = run_rust_for_one(name)
+        optimal_solution_length = best_known_solution[name]
+        print(f"Problem: {name}")
+        print(
+            f"Our solution length: {solution_length}, optimal solution length: {optimal_solution_length}"
+        )
+        deficit_ratio = solution_length / optimal_solution_length * 100 - 100
+        print(f"Our solution is worse by {deficit_ratio:.2f}%")
+        df.loc[(df["Name"] == name), "our_solution"] = solution_length
+        df.loc[(df["Name"] == name), "deficit_ratio"] = deficit_ratio
+        break
+
+    output_file = RESULTS_DIR / "My_results.csv"
+    df.to_csv(output_file)

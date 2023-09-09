@@ -1,8 +1,6 @@
 import warnings
 from math import ceil
-from random import randrange
-from random import shuffle
-from random import uniform
+from random import randrange, shuffle, uniform
 
 import numpy as np
 
@@ -10,10 +8,10 @@ from src.Code.calculate_distance import cycle_length
 
 
 def transition_function_shuffle(
-        solution: list[int],
-        solution_length: float,
-        distance_matrix: list[list[float]],
-        transformation_length: int,
+    solution: list[int],
+    solution_length: float,
+    distance_matrix: list[list[float]],
+    transformation_length: int,
 ) -> tuple[list[int], float]:
     """
     Performs a shuffle transition on a given solution.
@@ -46,10 +44,10 @@ def transition_function_shuffle(
 
 
 def transition_function_swap(
-        solution: list[int],
-        solution_length: float,
-        distance_matrix: list[list[float]],
-        transformation_length: int,
+    solution: list[int],
+    solution_length: float,
+    distance_matrix: list[list[float]],
+    transformation_length: int,
 ) -> tuple[list[int], float]:
     """
     Performs a swap transition on a given solution.
@@ -78,10 +76,17 @@ def transition_function_swap(
 
     # first path should be actually first
     if start_index_second_path < start_index_first_path:
-        start_index_first_path, start_index_second_path = start_index_second_path, start_index_first_path
+        start_index_first_path, start_index_second_path = (
+            start_index_second_path,
+            start_index_first_path,
+        )
 
-    first_path_can_go_right = start_index_second_path - start_index_first_path >= transformation_length
-    second_path_can_go_right = l - start_index_second_path + start_index_first_path >= transformation_length
+    first_path_can_go_right = (
+        start_index_second_path - start_index_first_path >= transformation_length
+    )
+    second_path_can_go_right = (
+        l - start_index_second_path + start_index_first_path >= transformation_length
+    )
 
     if (not first_path_can_go_right) and second_path_can_go_right:
         start_index_first_path = start_index_first_path - transformation_length + 1
@@ -100,11 +105,7 @@ def transition_function_swap(
     return new_solution, new_solution_length
 
 
-def acceptance(
-        solution_length: float,
-        new_solution_length: float,
-        temperature: float
-) -> bool:
+def acceptance(solution_length: float, new_solution_length: float, temperature: float) -> bool:
     """
     Decides whether to accept the new solution.
     """
@@ -114,13 +115,13 @@ def acceptance(
 
 
 def metropolis_transition(
-        solution: list[int],
-        solution_length: float,
-        distance_matrix: list[list[float]],
-        temperature: float,
-        max_possible_temperature: float,
-        is_shuffle: bool,
-        max_length_percent_of_cycle: float,
+    solution: list[int],
+    solution_length: float,
+    distance_matrix: list[list[float]],
+    temperature: float,
+    max_possible_temperature: float,
+    is_shuffle: bool,
+    max_length_percent_of_cycle: float,
 ) -> tuple[list[int], float]:
     """
     Performs a Metropolis transition on a given solution.

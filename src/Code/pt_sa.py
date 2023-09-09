@@ -8,15 +8,15 @@ from src.Code.replica_transition import replica_transition
 
 
 def update_state(
-        solutions: list[list[int]],
-        solutions_lengths: float,
-        distance_matrix: list[list[float]],
-        temperatures: list[float],
-        max_temperature: float,
-        transition_function_types: list[bool],
-        max_length_percent_of_cycle: float,
-        state: int,
-        lock: threading.Lock,
+    solutions: list[list[int]],
+    solutions_lengths: float,
+    distance_matrix: list[list[float]],
+    temperatures: list[float],
+    max_temperature: float,
+    transition_function_types: list[bool],
+    max_length_percent_of_cycle: float,
+    state: int,
+    lock: threading.Lock,
 ):
     solution, solution_length = metropolis_transition(
         solutions[state],
@@ -32,20 +32,20 @@ def update_state(
 
 
 def pt_sa(
-        distance_matrix: list[list[float]],
-        n: int,
-        min_temperature: float,
-        max_temperature: float,
-        probability_of_shuffle: float,
-        probability_of_heuristic: float,
-        a: float,
-        b: float,
-        duration_of_execution_in_seconds: int,
-        k: int,
-        max_length_percent_of_cycle: float,
-        swap_states_probability: float,
-        closeness: float,
-        cooling_rate: float,
+    distance_matrix: list[list[float]],
+    n: int,
+    min_temperature: float,
+    max_temperature: float,
+    probability_of_shuffle: float,
+    probability_of_heuristic: float,
+    a: float,
+    b: float,
+    duration_of_execution_in_seconds: int,
+    k: int,
+    max_length_percent_of_cycle: float,
+    swap_states_probability: float,
+    closeness: float,
+    cooling_rate: float,
 ) -> tuple[list[int], float]:
     """
     Performs a Parallel Tempering Simulated Annealing
@@ -66,7 +66,9 @@ def pt_sa(
         b,
     )
 
+    tried = 0
     while time() - start < duration_of_execution_in_seconds:
+        tried += 1
         for _ in range(k):
             threads = []
             lock = threading.Lock()
@@ -110,8 +112,7 @@ def pt_sa(
                 )
 
         for state in range(n):
-            temperatures[state] = cooling(
-                cooling_rate, temperatures[state], min_temperature
-            )
+            temperatures[state] = cooling(cooling_rate, temperatures[state], min_temperature)
 
+    print(f"Python tried this loop {tried} times")
     return best_solution, best_solution_length
