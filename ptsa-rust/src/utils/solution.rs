@@ -84,27 +84,22 @@ impl Solution {
         assert!(first_index < self.size);
         assert!(second_index < self.size);
 
-        let both_can_span_right =
-            (first_index + length <= second_index) && (second_index + length <= self.size);
-        if both_can_span_right {
+        let first_fit_between_second = first_index + length <= second_index;
+        if first_fit_between_second {
             return Some((first_index, second_index));
         }
 
-        let both_can_span_middle = second_index - first_index >= 2 * length - 1;
-        if both_can_span_middle {
-            return Some((first_index, second_index - length + 1));
-        }
-
-        let both_can_span_left =
-            (first_index >= length - 1) && (second_index - first_index >= length);
-        if both_can_span_left {
-            return Some((first_index - length + 1, second_index - length + 1));
-        }
-
-        let both_span_opposite =
-            (first_index >= length - 1) && (second_index + length <= self.size);
-        if both_span_opposite {
+        let first_underflow = first_index < length - 1;
+        if !first_underflow {
             return Some((first_index - length + 1, second_index));
+        }
+
+        let mut underflow_first: usize = first_index + self.path.len() + 1 - length;
+        underflow_first %= self.path.len(); // TODO: Check if that is necessary
+
+        let first_move_overlap = second_index + length > underflow_first;
+        if !first_move_overlap {
+            return Some((underflow_first, second_index));
         }
 
         None
@@ -126,30 +121,16 @@ impl Solution {
             std::mem::swap(&mut first_index, &mut second_index);
         }
 
+        let max_len = self.path.len();
         match self.find_swap_indices(first_index, second_index, length) {
-            // Perfect scenario
             Some((first, second)) => {
-                let (head_split, tail_split) = self.path.split_at_mut(second);
-                swap_slices(
-                    &mut head_split[first..(first + length)],
-                    &mut tail_split[0..length],
-                );
-            }
-            // Needs shift
-            None => {
-                let first_can_span_right = first_index + length <= second_index;
-                if first_can_span_right {
-                    // -1 is not possible due to the 3 * length < N assumption
-                    self.path.rotate_left(first_index - 1);
-                    self.swap_parts(0, second_index - first_index + 1, length);
-                } else {
-                    // First must span left
-
-                    // BUG: This goes negative fix that
-                    self.path.rotate_right(length - first_index);
-                    self.swap_parts(0, second_index + length - first_index, length);
+                for offset in 0..length {
+                    let first_replace = (first + offset) % max_len;
+                    let second_replace = (second + offset) % max_len;
+                    self.path.swap(first_replace, second_replace);
                 }
             }
+            None => panic!("Impossible indicies"),
         }
     }
 
@@ -232,8 +213,8 @@ mod tests {
         let mut solution = Solution::new(path);
         solution.swap_parts(1, 2, 3);
         // Slice [2, 3, 4]
-        // Then swap with [7, 8, 0]
-        assert!(solution.path == vec![4, 1, 7, 8, 0, 5, 6, 2, 3]);
+        // Then swap with [8, 0, 1]
+        assert!(solution.path == vec![3, 4, 8, 0, 1, 5, 6, 7, 2]);
     }
 
     #[test]
