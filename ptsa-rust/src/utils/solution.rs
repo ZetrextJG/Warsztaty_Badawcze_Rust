@@ -6,13 +6,6 @@ fn shuffle_slice(slice: &mut [usize]) {
     slice.shuffle(&mut thread_rng())
 }
 
-fn swap_slices(first: &mut [usize], second: &mut [usize]) {
-    assert_eq!(first.len(), second.len());
-    for i in 0..first.len() {
-        std::mem::swap(&mut first[i], &mut second[i]);
-    }
-}
-
 #[derive(Debug, Clone)]
 pub struct Solution {
     pub path: Vec<usize>,
