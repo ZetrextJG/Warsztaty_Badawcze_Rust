@@ -38,6 +38,8 @@ impl Solution {
         }
 
         let mut path: Vec<usize> = Vec::with_capacity(dmatrix.size);
+        let mut visited: Vec<bool> = vec![false; dmatrix.size];
+
         path.push(starting_city);
 
         let mut current_city = starting_city;
@@ -45,11 +47,12 @@ impl Solution {
             let next_city = dmatrix.matrix[current_city]
                 .iter()
                 .enumerate()
-                .filter(|(i, _)| *i != current_city && !path.contains(i))
+                .filter(|(i, _)| *i != current_city && !(visited[*i]))
                 .min_by(|(_, a), (_, b)| a.total_cmp(b))
                 .map(|(i, _)| i)
                 .unwrap();
             path.push(next_city);
+            visited[next_city] = true;
             current_city = next_city;
         }
         Solution::new(path)

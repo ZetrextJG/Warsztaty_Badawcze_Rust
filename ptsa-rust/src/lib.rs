@@ -1,5 +1,4 @@
 use chrono::Utc;
-use ctrlc;
 use pyo3::prelude::*;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use utils::{
