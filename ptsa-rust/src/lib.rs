@@ -29,8 +29,10 @@ impl PtsaAlgorithm {
             .map(|starting_city| {
                 Solution::nearest_neightbor_solution(&distance_matrix, starting_city)
             })
-            // HACK: This is not a solution I would like to use
-            .map(|solution| (solution.clone(), solution.cost(&distance_matrix)))
+            .map(|solution| {
+                let cost = solution.cost(&distance_matrix);
+                (solution, cost)
+            })
             .collect();
 
         all_heuristic_solutions.sort_by(|(_, a), (_, b)| a.total_cmp(b));
