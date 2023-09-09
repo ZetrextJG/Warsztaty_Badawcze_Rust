@@ -21,7 +21,7 @@ impl State {
         let ratio = self.temperature / max_temp;
         let trans_length: usize = (n as f64 * max_percent * ratio).ceil() as usize;
         if self.is_transion_shuffle {
-            let start = thread_rng().gen_range(0..=n);
+            let start = thread_rng().gen_range(0..n);
             self.solution.shuffle(start, trans_length);
         } else {
             // I hate this solution but it is O(1) on average
