@@ -1,4 +1,3 @@
-use pyo3::ffi::Py_FileSystemDefaultEncoding;
 use rand::{thread_rng, Rng};
 
 use super::{

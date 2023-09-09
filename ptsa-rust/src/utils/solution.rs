@@ -111,6 +111,8 @@ impl Solution {
     }
 
     pub fn swap_parts(&mut self, mut first_index: usize, mut second_index: usize, length: usize) {
+        dbg!(first_index);
+        dbg!(second_index);
         assert!(first_index < self.size);
         assert!(second_index < self.size);
 
@@ -137,11 +139,13 @@ impl Solution {
             None => {
                 let first_can_span_right = first_index + length <= second_index;
                 if first_can_span_right {
-                    // -1 is not possbile due to the 3 * length < N assumption
+                    // -1 is not possible due to the 3 * length < N assumption
                     self.path.rotate_left(first_index - 1);
                     self.swap_parts(0, second_index - first_index + 1, length);
                 } else {
                     // First must span left
+
+                    // BUG: This goes negative fix that
                     self.path.rotate_right(length - first_index);
                     self.swap_parts(0, second_index + length - first_index, length);
                 }
@@ -175,14 +179,6 @@ mod tests {
     }
 
     #[test]
-    fn test_swap_slice() {
-        let mut data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
-        let (first, second) = data.split_at_mut(3);
-        swap_slices(first, &mut second[0..3]);
-        assert_eq!(data, vec![4, 5, 6, 1, 2, 3, 7, 8, 9]);
-    }
-
-    #[test]
     fn test_solution_shuffle() {
         let path = vec![1, 2, 3, 4, 5, 6];
         let mut solution = Solution::new(path);
@@ -197,6 +193,14 @@ mod tests {
     }
 
     #[test]
+    fn test_swap_slice() {
+        let mut data = vec![1, 2, 3, 4, 5, 6, 7, 8, 9];
+        let (first, second) = data.split_at_mut(3);
+        swap_slices(first, &mut second[0..3]);
+        assert_eq!(data, vec![4, 5, 6, 1, 2, 3, 7, 8, 9]);
+    }
+
+    #[test]
     fn test_solution_swap() {
         let path = vec![1, 2, 3, 4, 5, 6, 7, 8];
         let mut solution = Solution::new(path);
@@ -205,7 +209,7 @@ mod tests {
     }
 
     #[test]
-    fn test_solution_swap_opposite() {
+    fn test_solution_swap_opposities() {
         let path = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let mut solution = Solution::new(path);
         solution.swap_parts(5, 6, 3);
@@ -213,23 +217,23 @@ mod tests {
     }
 
     #[test]
-    fn test_solution_swap_with_shift() {
+    fn test_solution_swap_with_overflow() {
         let path = vec![0, 1, 2, 3, 4, 5, 6];
         let mut solution = Solution::new(path);
-        solution.swap_parts(3, 5, 3);
-        // First shift [1, 2, 3, 4, 5, 6, 0]
-        // Then swap [5, 6, 0, 4, 1, 2, 3]
-        assert!(solution.path == vec![5, 6, 0, 4, 1, 2, 3]);
+        solution.swap_parts(2, 5, 3);
+        // Slice [2, 3, 4]
+        // Then swap with [5, 6, 0]
+        assert!(solution.path == vec![4, 1, 5, 6, 0, 2, 3]);
     }
 
     #[test]
-    fn test_solution_swap_with_shift2() {
+    fn test_solution_swap_with_underflow() {
         let path = vec![0, 1, 2, 3, 4, 5, 6, 7, 8];
         let mut solution = Solution::new(path);
-        solution.swap_parts(6, 7, 3);
-        // First shift [4, 5, 6, 7, 8, 0, 1, 2, 3]
-        // Then swap [7, 8, 0, 4, 5, 6, 1, 2, 3]
-        assert!(solution.path == vec![7, 8, 0, 4, 5, 6, 1, 2, 3]);
+        solution.swap_parts(1, 2, 3);
+        // Slice [2, 3, 4]
+        // Then swap with [7, 8, 0]
+        assert!(solution.path == vec![4, 1, 7, 8, 0, 5, 6, 2, 3]);
     }
 
     #[test]
