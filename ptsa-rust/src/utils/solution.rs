@@ -106,8 +106,6 @@ impl Solution {
     }
 
     pub fn swap_parts(&mut self, mut first_index: usize, mut second_index: usize, length: usize) {
-        dbg!(first_index);
-        dbg!(second_index);
         assert!(first_index < self.size);
         assert!(second_index < self.size);
 

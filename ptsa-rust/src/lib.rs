@@ -1,4 +1,5 @@
 use chrono::Utc;
+use ctrlc;
 use pyo3::prelude::*;
 use rand::{seq::SliceRandom, thread_rng, Rng};
 use utils::{
@@ -34,8 +35,7 @@ impl PtsaAlgorithm {
 
         all_heuristic_solutions.sort_by(|(_, a), (_, b)| a.total_cmp(b));
 
-        // WARN: I choose to use 15% instead of 10% of the solutions
-        let takes = (all_heuristic_solutions.len() as f64 * 0.15) as usize;
+        let takes = (all_heuristic_solutions.len() as f64 * 0.1) as usize;
         let heuristic_solutions: Vec<Solution> = all_heuristic_solutions
             .into_iter()
             .take(takes)
@@ -76,8 +76,7 @@ impl PtsaAlgorithm {
             // This comparison might be a bottleneck
             // Break condition
             if Utc::now().timestamp() >= deadline {
-                let (best_solution, cost) = states.best_solution();
-                return (best_solution.clone(), cost);
+                return (states.best_solution.unwrap(), states.best_cost);
             }
 
             for _ in 0..self.params.number_of_repeats {
@@ -110,6 +109,11 @@ impl PtsaAlgorithm {
         // Returns the best solution
         let timestamp = deadline_timestamp.parse::<i64>().unwrap();
         let dmatrix = DistanceMatrix::new(matrix);
+
+        // Add ctrlc handler
+        ctrlc::set_handler(|| std::process::exit(2)).unwrap();
+
+        println!("Rust solver. Start!");
         let (best_solution, cost) = self.run(dmatrix, timestamp);
         (best_solution.path, cost)
     }

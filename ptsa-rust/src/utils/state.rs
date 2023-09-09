@@ -47,7 +47,9 @@ pub struct StatesContainer {
 
     pub states: Vec<State>,
     pub costs: Vec<f64>,
-    pub best_index: usize,
+
+    pub best_cost: f64,
+    pub best_solution: Option<Solution>,
 }
 
 impl StatesContainer {
@@ -57,7 +59,9 @@ impl StatesContainer {
             distance_matrix,
             states: vec![],
             costs: vec![],
-            best_index: 0,
+
+            best_cost: f64::INFINITY,
+            best_solution: None,
         }
     }
 
@@ -65,27 +69,19 @@ impl StatesContainer {
         self.distance_matrix.size
     }
 
-    pub fn best_state(&self) -> &State {
-        self.states.get(self.best_index).unwrap()
-    }
-
-    pub fn best_solution_cost(&self) -> f64 {
-        *self.costs.get(self.best_index).unwrap()
-    }
-
-    pub fn best_solution(&self) -> (&Solution, f64) {
-        (&self.best_state().solution, self.best_solution_cost())
-    }
-
     pub fn add(&mut self, state: State) {
         assert!(state.size() == self.size());
 
         let cost = state.solution.cost(&self.distance_matrix);
+        // println!("Cost: {}", cost);
+        if cost < self.best_cost {
+            println!("Initial best solution at cost: {}", cost);
+            self.best_cost = cost;
+            self.best_solution = Some(state.solution.clone());
+        }
+
         self.states.push(state);
         self.costs.push(cost);
-        if cost < self.best_solution_cost() {
-            self.best_index = self.states.len() - 1;
-        }
     }
 
     pub fn cool(&mut self, cooling_rate: f64) {
@@ -101,15 +97,20 @@ impl StatesContainer {
             new_state.mutate_state(self.temp_bounds.max, max_percent_of_cycle);
             let new_cost = new_state.solution.cost(&self.distance_matrix);
 
-            if acceptance(new_cost, *cost, new_state.temperature) {
+            // println!("{:?}", new_state.solution.path);
+            // print!("New cost {}", new_cost);
+            if acceptance(*cost, new_cost, new_state.temperature) {
                 *state = new_state;
                 *cost = new_cost;
             }
         }
 
         for (i, cost) in self.costs.iter().enumerate() {
-            if *cost < self.best_solution_cost() {
-                self.best_index = i
+            // println!("Cost: {}", cost);
+            if *cost < self.best_cost {
+                println!("New best solution at cost: {}", *cost);
+                self.best_cost = *cost;
+                self.best_solution = Some(self.states[i].solution.clone());
             }
         }
     }
@@ -131,7 +132,7 @@ impl StatesContainer {
             std::mem::swap(&mut first_index, &mut second_index);
         }
 
-        let cost_upper_bound = closeness * self.best_solution_cost();
+        let cost_upper_bound = closeness * self.best_cost;
         let first_cost_to_much = self.costs[first_index] > cost_upper_bound;
         let second_cost_to_much = self.costs[second_index] > cost_upper_bound;
 
