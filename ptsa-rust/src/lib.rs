@@ -72,13 +72,16 @@ impl PtsaAlgorithm {
             }
         }
 
+        let mut all_tries: usize = 0;
         loop {
             // This comparison might be a bottleneck
             // Break condition
             if Utc::now().timestamp() >= deadline {
+                println!("This loop run {} times", all_tries);
                 return (states.best_solution.unwrap(), states.best_cost);
             }
 
+            all_tries += 1;
             for _ in 0..self.params.number_of_repeats {
                 states.metropolis_tranision(self.params.max_length_percent_of_cycle);
                 for _ in 0..states.states.len() {
