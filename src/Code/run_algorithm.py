@@ -1,3 +1,4 @@
+import os
 from pathlib import Path
 
 import pandas as pd
@@ -109,9 +110,12 @@ def iterate_over_all_problems_with_time(exec_time: float):
 def run_rust_for_one(problem_name: str) -> tuple[list[float], float]:
     distance_matrix: list[list[float]] = problems[problem_name]  # type: ignore
     exec_time = 60 * 1  # 1 min
+
+    threads: int = os.cpu_count()  # type: ignore
     result = run_ptsa(
         distance_matrix,
         time_s=exec_time,
+        number_of_threads=threads - 1,
     )
     solution, solution_length = result
     print(f"Our best solution: {solution}\nOur best solution length: {solution_length}")

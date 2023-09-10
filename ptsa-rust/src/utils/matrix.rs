@@ -1,4 +1,4 @@
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct DistanceMatrix {
     pub matrix: Vec<Vec<f64>>,
     pub size: usize,

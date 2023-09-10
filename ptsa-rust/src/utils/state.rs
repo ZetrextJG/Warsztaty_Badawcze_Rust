@@ -73,9 +73,7 @@ impl StatesContainer {
         assert!(state.size() == self.size());
 
         let cost = state.solution.cost(&self.distance_matrix);
-        // println!("Cost: {}", cost);
         if cost < self.best_cost {
-            println!("Initial best solution at cost: {}", cost);
             self.best_cost = cost;
             self.best_solution = Some(state.solution.clone());
         }
@@ -97,8 +95,6 @@ impl StatesContainer {
             new_state.mutate_state(self.temp_bounds.max, max_percent_of_cycle);
             let new_cost = new_state.solution.cost(&self.distance_matrix);
 
-            // println!("{:?}", new_state.solution.path);
-            // print!("New cost {}", new_cost);
             if acceptance(*cost, new_cost, new_state.temperature) {
                 *state = new_state;
                 *cost = new_cost;
@@ -106,9 +102,7 @@ impl StatesContainer {
         }
 
         for (i, cost) in self.costs.iter().enumerate() {
-            // println!("Cost: {}", cost);
             if *cost < self.best_cost {
-                println!("New best solution at cost: {}", *cost);
                 self.best_cost = *cost;
                 self.best_solution = Some(self.states[i].solution.clone());
             }

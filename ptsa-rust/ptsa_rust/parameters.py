@@ -4,8 +4,8 @@ from dataclasses import dataclass
 @dataclass
 class Parameters:
     number_of_states: int = 20
-    number_of_repeats: int = 20
-    number_of_concurrent_threads: int = 1
+    number_of_repeats: int = 20  # ignored for now
+    number_of_threads: int = 1
     min_temperature: float = 0.1
     max_temperature: float = 50
     probability_of_shuffle: float = 0.1
