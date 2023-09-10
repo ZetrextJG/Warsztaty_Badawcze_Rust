@@ -78,7 +78,7 @@ impl PtsaAlgorithm {
             // This comparison might be a bottleneck
             // Break condition
             if Utc::now().timestamp() >= deadline {
-                println!("This loop run {} times", all_tries);
+                println!("This loop was run {} times", all_tries);
                 return (states.best_solution.unwrap(), states.best_cost);
             }
 
@@ -107,19 +107,20 @@ impl PtsaAlgorithm {
         })
     }
 
-    pub fn run_till(&self, matrix: Vec<Vec<f64>>, deadline_timestamp: String) -> (Vec<usize>, f64) {
+    pub fn run_till(
+        &self,
+        matrix: Vec<Vec<f64>>,
+        deadline_timestamp: String,
+    ) -> PyResult<(Vec<usize>, f64)> {
         // Run the PTSA algorith on a given distance matrix till the specified deadline
         // Deadtime must be a string containing the number of seconds from the start of unix time.
         // Returns the best solution
         let timestamp = deadline_timestamp.parse::<i64>().unwrap();
         let dmatrix = DistanceMatrix::new(matrix);
 
-        // Add ctrlc handler
-        ctrlc::set_handler(|| std::process::exit(2)).unwrap();
-
         println!("Rust solver. Start!");
         let (best_solution, cost) = self.run(dmatrix, timestamp);
-        (best_solution.path, cost)
+        Ok((best_solution.path, cost))
     }
 }
 
