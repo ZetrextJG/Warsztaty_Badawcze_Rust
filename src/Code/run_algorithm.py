@@ -1,9 +1,7 @@
-import time
 from pathlib import Path
 
 import pandas as pd
-from ptsa_rust import PtsaAlgorithm
-from ptsa_rust.parameters import Parameters
+from ptsa_rust import run_ptsa
 
 from src.Code.calculate_distance import cycle_length
 from src.Code.pt_sa import pt_sa
@@ -105,28 +103,22 @@ def iterate_over_all_problems_with_time(exec_time: float):
     df.to_csv(output_file)
 
 
+### RUST LAND
+
+
 def run_rust_for_one(problem_name: str) -> tuple[list[float], float]:
     distance_matrix: list[list[float]] = problems[problem_name]  # type: ignore
-    params = Parameters()
-    exec_time = 60 * 5  # 5 min
-    runner = PtsaAlgorithm(params)
-    deadline = int(time.time()) + exec_time
-    solution, solution_length = runner.run_till(
+    exec_time = 60 * 1  # 1 min
+    result = run_ptsa(
         distance_matrix,
-        str(deadline),
+        time_s=exec_time,
     )
-
-    true_length = cycle_length(solution, distance_matrix)
-    optimal_solution_length = best_known_solution[problem_name]
-    print(f"Problem: {problem_name}")
+    solution, solution_length = result
+    print(f"Our best solution: {solution}\nOur best solution length: {solution_length}")
     print(
-        f"Our solution length: {solution_length}, optimal solution length: {optimal_solution_length}"
+        f"Rust length: {solution_length}, python validation: {cycle_length(solution, distance_matrix)}"
     )
-    print(
-        f"Ultimate best solution: {solution}\nUltimate best solution length: {solution_length} == {true_length}"
-    )
-
-    return solution, solution_length
+    return solution, solution_length  # type: ignore
 
 
 def iterate_over_all_problems_rust():
@@ -146,9 +138,9 @@ def iterate_over_all_problems_rust():
         )
         deficit_ratio = solution_length / optimal_solution_length * 100 - 100
         print(f"Our solution is worse by {deficit_ratio:.2f}%")
+        print(solution)
         df.loc[(df["Name"] == name), "our_solution"] = solution_length
         df.loc[(df["Name"] == name), "deficit_ratio"] = deficit_ratio
-        break
 
-    output_file = RESULTS_DIR / "My_results.csv"
+    output_file = RESULTS_DIR / "Rust_results.csv"
     df.to_csv(output_file)
