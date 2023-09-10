@@ -43,6 +43,7 @@ impl Solution {
         let mut visited: Vec<bool> = vec![false; dmatrix.size];
 
         path.push(starting_city);
+        visited[starting_city] = true;
 
         let mut current_city = starting_city;
         for _ in 0..(dmatrix.size - 1) {
