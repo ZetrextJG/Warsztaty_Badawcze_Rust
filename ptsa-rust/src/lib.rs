@@ -107,19 +107,14 @@ impl PtsaAlgorithm {
         })
     }
 
-    pub fn run_till(
-        &self,
-        matrix: Vec<Vec<f64>>,
-        deadline_timestamp: String,
-    ) -> PyResult<(Vec<usize>, f64)> {
-        // Run the PTSA algorith on a given distance matrix till the specified deadline
-        // Deadtime must be a string containing the number of seconds from the start of unix time.
-        // Returns the best solution
-        let timestamp = deadline_timestamp.parse::<i64>().unwrap();
+    pub fn run_for(&self, matrix: Vec<Vec<f64>>, time: i64) -> PyResult<(Vec<usize>, f64)> {
+        // Run the PTSA algorithm on a given distance matrix
+        // for specified about of time (in seconds)
+        let deadline = Utc::now().timestamp() + time;
         let dmatrix = DistanceMatrix::new(matrix);
 
         println!("Rust solver. Start!");
-        let (best_solution, cost) = self.run(dmatrix, timestamp);
+        let (best_solution, cost) = self.run(dmatrix, deadline);
         Ok((best_solution.path, cost))
     }
 }

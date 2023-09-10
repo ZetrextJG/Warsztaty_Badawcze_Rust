@@ -6,10 +6,9 @@ class PtsaAlgorithm:
     params: Parameters
 
     def __init__(self, parms: Parameters) -> None: ...
-    def run_till(self, matrix: list[list[float]], deadline_timestamp: str) -> Result:
+    def run_for(self, matrix: list[list[float]], time: int) -> Result:
         """
-        Run the PTSA algorith on a given distance matrix till the specified deadline
-        Deadtime must be a string containing the number of seconds from the start of unix time.
-        Returns the best solution
+        Run the PTSA algorithm on a given distance matrix
+        for specified about of time (in seconds)
         """
         ...
