@@ -42,9 +42,8 @@ impl PtsaAlgorithm {
             .collect()
     }
 
-    fn run(&self, dmatrix: DistanceMatrix, deadline: i64) -> AlgResult {
-        // Initialization
-        let size = dmatrix.size;
+    fn init_states<'a>(&self, distance_matrix: &'a DistanceMatrix) -> StatesContainer<'a> {
+        let problem_size = distance_matrix.size;
         let shuffle_bool_vector = initialize_transition_function_types(
             self.params.number_of_states,
             self.params.probability_of_shuffle,
@@ -58,10 +57,10 @@ impl PtsaAlgorithm {
             self.params.temp_beta_a,
             self.params.temp_beta_b,
         );
-        let heuristic_solutions = self.get_best_heuristic_solutions(&dmatrix);
+        let heuristic_solutions = self.get_best_heuristic_solutions(distance_matrix);
 
         // Creating states
-        let mut states: StatesContainer = StatesContainer::new(temp_bounds, dmatrix);
+        let mut states: StatesContainer = StatesContainer::new(temp_bounds, distance_matrix);
         let mut rng = thread_rng();
         for (temperature, is_transion_shuffle) in temperatures.into_iter().zip(shuffle_bool_vector)
         {
@@ -69,7 +68,7 @@ impl PtsaAlgorithm {
             let solution: Solution = if take_heuristic {
                 heuristic_solutions.choose(&mut rng).unwrap().clone()
             } else {
-                Solution::random_solution(size)
+                Solution::random_solution(problem_size)
             };
             let state = State {
                 solution,
@@ -79,6 +78,13 @@ impl PtsaAlgorithm {
             states.add(state);
         }
 
+        states
+    }
+
+    fn run_single(&self, dmatrix: &DistanceMatrix, time: i64) -> AlgResult {
+        let deadline = Utc::now().timestamp() + time;
+        // Initialization
+        let mut states = self.init_states(dmatrix);
         // Main loop
         loop {
             // Break condition
@@ -102,6 +108,25 @@ impl PtsaAlgorithm {
             states.cool(self.params.cooling_rate);
         }
     }
+
+    fn run(&self, dmatrix: DistanceMatrix, time: i64) -> AlgResult {
+        let mut results: Vec<AlgResult> = thread::scope(|s| {
+            let n = self.params.number_of_threads;
+            let handlers: Vec<ScopedJoinHandle<'_, AlgResult>> = (0..n)
+                .map(|i| {
+                    println!("Starting thread number {}.", i);
+                    s.spawn(|| self.run_single(&dmatrix, time))
+                })
+                .collect();
+            handlers
+                .into_iter()
+                .map(|handle| handle.join().unwrap())
+                .collect()
+        });
+        // Get the best result
+        results.sort_by(|a, b| a.cost.total_cmp(&b.cost));
+        results[0].clone()
+    }
 }
 
 #[pymethods]
@@ -117,28 +142,12 @@ impl PtsaAlgorithm {
     pub fn run_for(&self, matrix: Vec<Vec<f64>>, time: i64) -> PyResult<(Vec<usize>, f64)> {
         // Run the PTSA algorithm on a given distance matrix
         // for specified about of time (in seconds)
-        let deadline = Utc::now().timestamp() + time;
         let dmatrix = DistanceMatrix::new(matrix);
 
         println!("Rust solver. Start!");
         println!("See you in {} seconds!", time);
-        let mut results: Vec<AlgResult> = thread::scope(move |s| {
-            let n = self.params.number_of_threads;
-            let handlers: Vec<ScopedJoinHandle<'_, AlgResult>> = (0..n)
-                .map(|i| {
-                    println!("Starting thread number {}.", i);
-                    let dmatrix_clone = dmatrix.clone();
-                    s.spawn(move || self.run(dmatrix_clone, deadline))
-                })
-                .collect();
-            handlers
-                .into_iter()
-                .map(|handle| handle.join().unwrap())
-                .collect()
-        });
-        // Get the best result
-        results.sort_by(|a, b| a.cost.total_cmp(&b.cost));
-        let best_result = results[0].clone();
+        let best_result = self.run(dmatrix, time);
+
         Ok((best_result.path, best_result.cost))
     }
 }

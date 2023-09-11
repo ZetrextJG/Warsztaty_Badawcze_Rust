@@ -41,9 +41,9 @@ impl State {
 }
 
 #[derive(Debug)]
-pub struct StatesContainer {
+pub struct StatesContainer<'a> {
     pub temp_bounds: TemperatureBounds,
-    pub distance_matrix: DistanceMatrix,
+    pub distance_matrix: &'a DistanceMatrix,
 
     pub states: Vec<State>,
     pub costs: Vec<f64>,
@@ -52,8 +52,11 @@ pub struct StatesContainer {
     pub best_solution: Option<Solution>,
 }
 
-impl StatesContainer {
-    pub fn new(temp_bounds: TemperatureBounds, distance_matrix: DistanceMatrix) -> StatesContainer {
+impl<'a> StatesContainer<'a> {
+    pub fn new(
+        temp_bounds: TemperatureBounds,
+        distance_matrix: &DistanceMatrix,
+    ) -> StatesContainer {
         StatesContainer {
             temp_bounds,
             distance_matrix,
@@ -72,7 +75,7 @@ impl StatesContainer {
     pub fn add(&mut self, state: State) {
         assert!(state.size() == self.size());
 
-        let cost = state.solution.cost(&self.distance_matrix);
+        let cost = state.solution.cost(self.distance_matrix);
         if cost < self.best_cost {
             self.best_cost = cost;
             self.best_solution = Some(state.solution.clone());
@@ -93,7 +96,7 @@ impl StatesContainer {
         for (state, cost) in self.states.iter_mut().zip(self.costs.iter_mut()) {
             let mut new_state = state.clone();
             new_state.mutate_state(self.temp_bounds.max, max_percent_of_cycle);
-            let new_cost = new_state.solution.cost(&self.distance_matrix);
+            let new_cost = new_state.solution.cost(self.distance_matrix);
 
             if acceptance(*cost, new_cost, new_state.temperature) {
                 *state = new_state;
