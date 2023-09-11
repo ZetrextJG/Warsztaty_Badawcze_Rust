@@ -178,9 +178,9 @@ mod tests {
         let path = vec![0, 1, 2, 3, 4, 5];
         let mut solution = Solution::new(path);
         solution.shuffle(5, 3);
-        assert_eq!(solution.path[1], 1);
         assert_eq!(solution.path[2], 2);
         assert_eq!(solution.path[3], 3);
+        assert_eq!(solution.path[4], 4);
     }
 
     #[test]
