@@ -1,22 +1,19 @@
 use chrono::Utc;
 use pyo3::prelude::*;
 use rand::{seq::SliceRandom, thread_rng, Rng};
-use std::thread::{self, ScopedJoinHandle};
+use std::{
+    f64::INFINITY,
+    sync::{Arc, Mutex},
+    thread::{self, ScopedJoinHandle},
+};
 use utils::{
-    helpers::initialize_transition_function_types,
     matrix::DistanceMatrix,
     params::Params,
-    solution::Solution,
+    solution::{ComputedSolution, Solution},
     state::{State, StatesContainer},
     temp::TemperatureBounds,
 };
 mod utils;
-
-#[derive(Clone, Debug)]
-struct AlgResult {
-    path: Vec<usize>,
-    cost: f64,
-}
 
 #[pyclass]
 pub struct PtsaAlgorithm {
@@ -25,16 +22,25 @@ pub struct PtsaAlgorithm {
 
 impl PtsaAlgorithm {
     #[inline]
-    fn get_best_heuristic_solutions(&self, dmatrix: &DistanceMatrix) -> Vec<Solution> {
+    fn get_best_heuristic_solutions(
+        &self,
+        dmatrix: &DistanceMatrix,
+        backward: bool,
+    ) -> Vec<Solution> {
+        let create_heuristic_solution = if backward {
+            Solution::backwards_nearest_neightbor_solution
+        } else {
+            Solution::nearest_neightbor_solution
+        };
         let mut all_heuristic_solutions: Vec<(Solution, f64)> = (0..dmatrix.size)
-            .map(|starting_city| Solution::nearest_neightbor_solution(dmatrix, starting_city))
+            .map(|starting_city| create_heuristic_solution(dmatrix, starting_city))
             .map(|solution| {
                 let cost = solution.cost(dmatrix);
                 (solution, cost)
             })
             .collect();
         all_heuristic_solutions.sort_by(|(_, a), (_, b)| a.total_cmp(b));
-        let takes = (all_heuristic_solutions.len() as f64 * 0.1) as usize;
+        let takes = (all_heuristic_solutions.len() as f64 * 0.10) as usize;
         all_heuristic_solutions
             .into_iter()
             .take(takes)
@@ -42,55 +48,73 @@ impl PtsaAlgorithm {
             .collect()
     }
 
-    fn init_states<'a>(&self, distance_matrix: &'a DistanceMatrix) -> StatesContainer<'a> {
+    #[inline]
+    fn init_states<'a>(
+        &self,
+        distance_matrix: &'a DistanceMatrix,
+        starting_solutions: Vec<Solution>,
+    ) -> StatesContainer<'a> {
+        // Initialization
         let problem_size = distance_matrix.size;
-        let shuffle_bool_vector = initialize_transition_function_types(
-            self.params.number_of_states,
-            self.params.probability_of_shuffle,
-        );
+        for solution in starting_solutions.iter() {
+            assert_eq!(solution.size, problem_size);
+        }
         let temp_bounds = TemperatureBounds {
             max: self.params.max_temperature,
             min: self.params.min_temperature,
         };
-        let temperatures = temp_bounds.init_temperatures(
-            self.params.number_of_states,
-            self.params.temp_beta_a,
-            self.params.temp_beta_b,
-        );
-        let heuristic_solutions = self.get_best_heuristic_solutions(distance_matrix);
-
         // Creating states
-        let mut states: StatesContainer = StatesContainer::new(temp_bounds, distance_matrix);
-        let mut rng = thread_rng();
-        for (temperature, is_transion_shuffle) in temperatures.into_iter().zip(shuffle_bool_vector)
-        {
-            let take_heuristic = rng.gen_range(0.0..1.0) < self.params.probability_of_heuristic;
-            let solution: Solution = if take_heuristic {
-                heuristic_solutions.choose(&mut rng).unwrap().clone()
-            } else {
-                Solution::random_solution(problem_size)
-            };
+        let mut states: StatesContainer =
+            StatesContainer::new(temp_bounds.clone(), distance_matrix);
+        for solution in starting_solutions.into_iter() {
+            let temperature =
+                temp_bounds.random_temperature(self.params.temp_beta_a, self.params.temp_beta_b);
+            let is_shuffle_transition = rand::random::<f64>() < self.params.probability_of_shuffle;
             let state = State {
                 solution,
                 temperature,
-                is_transion_shuffle,
+                is_shuffle_transition,
             };
             states.add(state);
         }
-
         states
     }
 
-    fn run_single(&self, dmatrix: &DistanceMatrix, time: i64) -> AlgResult {
+    fn create_inital_states<'a>(
+        &self,
+        n: usize,
+        distance_matrix: &'a DistanceMatrix,
+        heuristic_solutions: &Vec<Solution>,
+    ) -> StatesContainer<'a> {
+        let rng = &mut thread_rng();
+        let solutions: Vec<Solution> = (0..n)
+            .map(|_| {
+                let take_heuristic = rng.gen_range(0.0..1.0) < self.params.probability_of_heuristic;
+                if take_heuristic {
+                    heuristic_solutions.choose(rng).unwrap().clone()
+                } else {
+                    Solution::random_solution(distance_matrix.size)
+                }
+            })
+            .collect();
+        // TODO: Make it just an iterator. Do not collect into vector
+        self.init_states(distance_matrix, solutions)
+    }
+
+    fn run_thread(
+        &self,
+        mut states: StatesContainer,
+        time: i64,
+        global_best: Arc<Mutex<f64>>,
+        thead_id: usize,
+    ) -> ComputedSolution {
         let deadline = Utc::now().timestamp() + time;
-        // Initialization
-        let mut states = self.init_states(dmatrix);
         // Main loop
         loop {
             // Break condition
             if Utc::now().timestamp() >= deadline {
-                return AlgResult {
-                    path: states.best_solution.unwrap().path,
+                return ComputedSolution {
+                    solution: states.best_solution.unwrap(),
                     cost: states.best_cost,
                 };
             }
@@ -106,16 +130,43 @@ impl PtsaAlgorithm {
             }
             // Cooling
             states.cool(self.params.cooling_rate);
+
+            // Update global best
+            {
+                let mut global_best_cost = global_best.lock().unwrap();
+                if states.best_cost < *global_best_cost {
+                    *global_best_cost = states.best_cost;
+                    println!("{} -> {} -> {}", Utc::now(), thead_id, states.best_cost)
+                }
+            }
         }
     }
 
-    fn run(&self, dmatrix: DistanceMatrix, time: i64) -> AlgResult {
-        let mut results: Vec<AlgResult> = thread::scope(|s| {
-            let n = self.params.number_of_threads;
-            let handlers: Vec<ScopedJoinHandle<'_, AlgResult>> = (0..n)
+    fn run(&self, dmatrix: DistanceMatrix, time: i64) -> ComputedSolution {
+        let mut heuristic_solutions = self.get_best_heuristic_solutions(&dmatrix, false);
+        {
+            // This is  here to empty memory faster from second vector
+            let mut backward_heuristic_solutions =
+                self.get_best_heuristic_solutions(&dmatrix, true);
+            heuristic_solutions.append(&mut backward_heuristic_solutions);
+        }
+
+        // Just do one run of it
+        println!("Starting SEARCH part");
+        let n = self.params.number_of_repeats;
+
+        let global_best = Arc::new(Mutex::new(INFINITY));
+        let mut results: Vec<ComputedSolution> = thread::scope(|s| {
+            let handlers: Vec<ScopedJoinHandle<'_, ComputedSolution>> = (0..n)
                 .map(|i| {
                     println!("Starting thread number {}.", i);
-                    s.spawn(|| self.run_single(&dmatrix, time))
+                    let initial_states = self.create_inital_states(
+                        self.params.number_of_states,
+                        &dmatrix,
+                        &heuristic_solutions,
+                    );
+                    let thead_global_best = Arc::clone(&global_best);
+                    s.spawn(move || self.run_thread(initial_states, time, thead_global_best, i))
                 })
                 .collect();
             handlers
@@ -123,9 +174,14 @@ impl PtsaAlgorithm {
                 .map(|handle| handle.join().unwrap())
                 .collect()
         });
-        // Get the best result
         results.sort_by(|a, b| a.cost.total_cmp(&b.cost));
-        results[0].clone()
+        let best_solution = results.get(0).unwrap().clone();
+        println!("Finished searching for solutions.");
+        println!(
+            "Currently the best solution has cost of: {}",
+            best_solution.cost
+        );
+        best_solution
     }
 }
 
@@ -147,8 +203,7 @@ impl PtsaAlgorithm {
         println!("Rust solver. Start!");
         println!("See you in {} seconds!", time);
         let best_result = self.run(dmatrix, time);
-
-        Ok((best_result.path, best_result.cost))
+        Ok((best_result.solution.path, best_result.cost))
     }
 }
 

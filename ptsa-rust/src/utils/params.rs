@@ -4,7 +4,6 @@ use pyo3::prelude::*;
 pub struct Params {
     pub number_of_states: usize,
     pub number_of_repeats: usize,
-    pub number_of_threads: usize,
     pub min_temperature: f64,
     pub max_temperature: f64,
     pub probability_of_shuffle: f64,

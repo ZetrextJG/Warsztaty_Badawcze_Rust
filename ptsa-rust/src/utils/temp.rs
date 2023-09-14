@@ -1,18 +1,16 @@
+use rand::thread_rng;
 use rand_distr::{Beta, Distribution};
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TemperatureBounds {
     pub max: f64,
     pub min: f64,
 }
 
 impl TemperatureBounds {
-    pub fn init_temperatures(&self, n: usize, a: f64, b: f64) -> Vec<f64> {
+    #[inline]
+    pub fn random_temperature(&self, a: f64, b: f64) -> f64 {
         let beta = Beta::new(a, b).unwrap();
-        let beta_samples: Vec<f64> = beta.sample_iter(rand::thread_rng()).take(n).collect();
-        beta_samples
-            .iter()
-            .map(|x| x * (self.max - self.min) + self.min)
-            .collect()
+        beta.sample_iter(&mut thread_rng()).next().unwrap()
     }
 }

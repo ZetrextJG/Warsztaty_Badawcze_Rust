@@ -1,14 +1,17 @@
 use rand::{thread_rng, Rng};
 
 use super::{
-    helpers::acceptance, matrix::DistanceMatrix, solution::Solution, temp::TemperatureBounds,
+    helpers::acceptance,
+    matrix::DistanceMatrix,
+    solution::{ComputedSolution, Solution},
+    temp::TemperatureBounds,
 };
 
 #[derive(Debug, Clone)]
 pub struct State {
     pub solution: Solution,
     pub temperature: f64,
-    pub is_transion_shuffle: bool,
+    pub is_shuffle_transition: bool,
 }
 
 impl State {
@@ -20,7 +23,7 @@ impl State {
         let n = self.size();
         let ratio = self.temperature / max_temp;
         let trans_length: usize = (n as f64 * max_percent * ratio).ceil() as usize;
-        if self.is_transion_shuffle {
+        if self.is_shuffle_transition {
             let start = thread_rng().gen_range(0..n);
             self.solution.shuffle(start, trans_length);
         } else {
@@ -40,7 +43,7 @@ impl State {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StatesContainer<'a> {
     pub temp_bounds: TemperatureBounds,
     pub distance_matrix: &'a DistanceMatrix,
@@ -91,6 +94,21 @@ impl<'a> StatesContainer<'a> {
             state.temperature = f64::max(new_temperatue, self.temp_bounds.min);
         })
     }
+
+    // pub fn best_solutions(self, n: usize) -> Vec<ComputedSolution> {
+    //     assert!(n < self.states.len());
+    //     let mut wrapped: Vec<ComputedSolution> = self
+    //         .states
+    //         .into_iter()
+    //         .zip(self.costs)
+    //         .map(|(state, cost)| ComputedSolution {
+    //             solution: state.solution,
+    //             cost,
+    //         })
+    //         .collect();
+    //     wrapped.sort_by(|a, b| a.cost.total_cmp(&b.cost));
+    //     wrapped.into_iter().take(n).collect()
+    // }
 
     pub fn metropolis_tranision(&mut self, max_percent_of_cycle: f64) {
         for (state, cost) in self.states.iter_mut().zip(self.costs.iter_mut()) {

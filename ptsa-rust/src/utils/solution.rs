@@ -60,6 +60,36 @@ impl Solution {
         }
         Solution::new(path)
     }
+
+    pub fn backwards_nearest_neightbor_solution(dmatrix: &DistanceMatrix, end_city: usize) -> Self {
+        if end_city >= dmatrix.size {
+            panic!("Impossible choice for the first city")
+        }
+
+        let mut path: Vec<usize> = Vec::with_capacity(dmatrix.size);
+        let mut visited: Vec<bool> = vec![false; dmatrix.size];
+
+        path.push(end_city);
+        visited[end_city] = true;
+
+        let mut current_city = end_city;
+        for i in 0..(dmatrix.size - 1) {
+            let next_city = dmatrix
+                .matrix
+                .iter()
+                .map(|row| row[i])
+                .enumerate()
+                .filter(|(i, _)| *i != current_city && !(visited[*i]))
+                .min_by(|(_, a), (_, b)| a.total_cmp(b))
+                .map(|(i, _)| i)
+                .unwrap();
+            path.push(next_city);
+            visited[next_city] = true;
+            current_city = next_city;
+        }
+        path.reverse();
+        Solution::new(path)
+    }
 }
 
 impl Solution {
@@ -148,6 +178,12 @@ impl Solution {
         }
         length + dmatrix.matrix[self.path[self.size - 1]][self.path[0]]
     }
+}
+
+#[derive(Clone, Debug)]
+pub struct ComputedSolution {
+    pub solution: Solution,
+    pub cost: f64,
 }
 
 #[cfg(test)]

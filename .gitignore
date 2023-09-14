@@ -4,3 +4,4 @@
 .venv
 .Rproj.user
 logs*
+*.log
